@@ -1,0 +1,7 @@
+{
+  "version": "17.25.0",
+  "commit": "f74818ada177756bd95c26235cdd26ebe4f07e76",
+  "android_ndk": "r29",
+  "python": "3.12",
+  "node": "24"
+}

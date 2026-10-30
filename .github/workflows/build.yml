@@ -1,0 +1,260 @@
+name: Build Frida
+run-name: Frida ${{ inputs.platform }} / ${{ inputs.request_id || github.run_number }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platforms to build
+        type: choice
+        required: true
+        default: all
+        options: [all, windows, macos, android, ios, linux]
+      request_id:
+        description: Optional identifier for the local launcher
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.lock.outputs.version }}
+      commit: ${{ steps.lock.outputs.commit }}
+      ndk: ${{ steps.lock.outputs.android_ndk }}
+      python: ${{ steps.lock.outputs.python }}
+      node: ${{ steps.lock.outputs.node }}
+      apple_matrix: ${{ steps.lock.outputs.apple_matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - id: lock
+        env:
+          BUILD_PLATFORM: ${{ inputs.platform }}
+        shell: python
+        run: |
+          import json, os
+          from pathlib import Path
+          lock = json.loads(Path('frida-version.json').read_text())
+          selected = os.environ['BUILD_PLATFORM']
+          apple = [{'target': target} for target in (
+              'macos-x86_64', 'macos-arm64', 'ios-arm64', 'ios-arm64e'
+          ) if selected == 'all' or target.startswith(selected + '-')]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for key, value in lock.items():
+                  print(f'{key}={value}', file=output)
+              print('apple_matrix=' + json.dumps({'include': apple}), file=output)
+      - name: Check packaging safeguards
+        run: python -m unittest discover -s tests -v
+
+  windows:
+    needs: version
+    if: inputs.platform == 'all' || inputs.platform == 'windows'
+    runs-on: windows-2022
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x86_64
+            msystem: UCRT64
+            gcc: mingw-w64-ucrt-x86_64-gcc
+          - target: windows-x86
+            msystem: MINGW32
+            gcc: mingw-w64-i686-gcc
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ needs.version.outputs.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.version.outputs.node }}
+      - name: Install Python build dependencies
+        run: python -m pip install setuptools
+      - name: Fetch pinned source and required submodules
+        run: python -u scripts/build.py prepare
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          cache: false
+      - uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: ${{ matrix.msystem }}
+          install: ${{ matrix.gcc }}
+      - name: Build and check components
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+          BUILD_TARGET: ${{ matrix.target }}
+        run: python -u scripts/build.py build --target $env:BUILD_TARGET
+      - name: Upload archives and checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: frida-${{ needs.version.outputs.version }}-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-${{ matrix.target }}
+          path: |
+            work/**/build.log
+            work/**/meson-logs/**
+          if-no-files-found: ignore
+
+  linux:
+    needs: version
+    if: inputs.platform == 'all' || inputs.platform == 'linux'
+    runs-on: ubuntu-24.04
+    container: ghcr.io/frida/x-tools-linux-${{ matrix.arch }}:latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, arm64]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Fetch pinned source and required submodules
+        run: python -u scripts/build.py prepare
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          cache: false
+      - name: Configure target sysroot
+        run: echo "FRIDA_QEMU_SYSROOT=/opt/x-tools/$XTOOLS_HOST/$XTOOLS_HOST/sysroot" >> "$GITHUB_ENV"
+      - name: Build and check components
+        env:
+          BUILD_TARGET: linux-${{ matrix.arch }}
+        run: python -u scripts/build.py build --target "$BUILD_TARGET"
+      - name: Upload archives and checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: frida-${{ needs.version.outputs.version }}-linux-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-linux-${{ matrix.arch }}
+          path: |
+            work/**/build.log
+            work/**/meson-logs/**
+          if-no-files-found: ignore
+
+  android:
+    needs: version
+    if: inputs.platform == 'all' || inputs.platform == 'android'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm, arm64, x86, x86_64]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ needs.version.outputs.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.version.outputs.node }}
+      - name: Fetch pinned source and required submodules
+        run: python -u scripts/build.py prepare
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          cache: false
+      - uses: nttld/setup-ndk@v1
+        id: ndk
+        with:
+          ndk-version: ${{ needs.version.outputs.ndk }}
+          add-to-path: false
+      - name: Build and check components
+        env:
+          ANDROID_NDK_ROOT: ${{ steps.ndk.outputs.ndk-path }}
+          BUILD_TARGET: android-${{ matrix.arch }}
+        run: python -u scripts/build.py build --target "$BUILD_TARGET"
+      - name: Upload archives and checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: frida-${{ needs.version.outputs.version }}-android-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-android-${{ matrix.arch }}
+          path: |
+            work/**/build.log
+            work/**/meson-logs/**
+          if-no-files-found: ignore
+
+  apple:
+    needs: version
+    if: inputs.platform == 'all' || inputs.platform == 'macos' || inputs.platform == 'ios'
+    runs-on: macos-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.version.outputs.apple_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ needs.version.outputs.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ needs.version.outputs.node }}
+      - name: Fetch pinned source and required submodules
+        run: python -u scripts/build.py prepare
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          cache: false
+      - name: Check Xcode
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-path
+      - name: Build and check components with ad-hoc signing
+        env:
+          BUILD_TARGET: ${{ matrix.target }}
+        run: python -u scripts/build.py build --target "$BUILD_TARGET"
+      - name: Upload archives and checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: frida-${{ needs.version.outputs.version }}-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Upload build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: logs-${{ matrix.target }}
+          path: |
+            work/**/build.log
+            work/**/meson-logs/**
+          if-no-files-found: ignore

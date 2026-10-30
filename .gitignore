@@ -1,0 +1,7 @@
+.upstream/
+.venv/
+work/
+dist/
+__pycache__/
+*.pyc
+frida-build-config-*.zip
