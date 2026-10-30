@@ -25,10 +25,10 @@
 
 ## GitHub 登录与启动
 
-本机已准备便携版 GitHub CLI，位于 `work/tools/gh/bin/gh.exe`，不需要全局安装。在本目录运行以下 PowerShell 命令，并按终端提示打开浏览器授权：
+可以安装 [GitHub CLI](https://cli.github.com/)，在本目录运行以下 PowerShell 命令，并按终端提示打开浏览器授权。本次操作的 Windows 工作区另已准备便携版，位于 `work/tools/gh/bin/gh.exe`，该二进制未提交到仓库。
 
 ```powershell
-.\work\tools\gh\bin\gh.exe auth login --hostname github.com --git-protocol https --web
+gh auth login --hostname github.com --git-protocol https --web
 ```
 
 如使用 fine-grained token，先创建构建仓库，在 GitHub **Settings → Developer settings → Personal access tokens → Fine-grained tokens** 中生成令牌，仅选择该仓库，授予 **Contents、Workflows、Actions** 的 **Read and write** 权限。令牌应通过 GitHub CLI 本地登录输入；不要放到源码、工作流、命令行参数或聊天中。
@@ -81,8 +81,11 @@ python -u scripts/build.py build --target windows-x86_64 --source D:\frida-src\1
 
 - 已通过 actionlint 1.7.12 的工作流检查。
 - 已通过 Python 语法检查，以及 7 项打包检查测试：错误架构、缺失组件、缺失开发包、清单与压缩包校验、arm64e 子类型校验、兼容架构 Gadget、Apple 通用二进制。
-- 本机直连 GitHub 主站、API、raw 源码以及 `git ls-remote` 已恢复；尚未执行本地编译。
-- 尚未触发 GitHub Actions，尚无实际编译成功或设备运行成功的记录。
+- 已在公开仓库 [xiaojianbang8888/frida-build](https://github.com/xiaojianbang8888/frida-build) 完成 Windows、macOS、Android、iOS、Linux 共 12 组架构构建。
+- [首轮运行](https://github.com/xiaojianbang8888/frida-build/actions/runs/41121484242) 中，macOS、iOS、Android、Linux 的 10 组架构均成功，Windows 两组遇到旧 MSVC 与 V8 依赖不匹配的问题。
+- 改用 windows-latest 后，[Windows 重跑](https://github.com/xiaojianbang8888/frida-build/actions/runs/41122665431) 的 x86、x86_64 两组均成功。
+- 本轮成功产物分别位于以上两次运行的 Artifacts 中，保留 7 天。macOS arm64、Linux x86_64 和 Windows x86_64 在 runner 上通过了 `frida-server --version` 检查。
+- 本轮验证不包含手机真机注入测试，也不包含 macOS 分发签名、公证或 App Store 部署验证。
 
 复查配置可运行：
 
