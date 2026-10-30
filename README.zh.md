@@ -6,7 +6,7 @@
 
 | 平台 | 架构 | 构建环境 |
 | --- | --- | --- |
-| Windows | x86、x86_64 | Windows 2022 runner，VS C++ 工具链 |
+| Windows | x86、x86_64 | windows-latest runner，匹配预编译 SDK 的 VS C++ 工具链 |
 | macOS | x86_64、arm64 | macOS runner，Xcode |
 | Android | arm、arm64、x86、x86_64 | Ubuntu runner，Android NDK r29 |
 | iOS 真机 | arm64、arm64e | macOS runner，iPhoneOS SDK |
@@ -61,7 +61,7 @@ Linux 采用官方 `ghcr.io/frida/x-tools-linux-<arch>:latest` 容器及其 `XTO
 
 ## Windows 本地构建
 
-需要 Git、Python、Node.js/npm、VS 2022 C++ 工具链和 Windows SDK。启用 compiler backend 还需按 `frida-core/src/compiler/go.mod` 安装 Go（当前要求 1.26），以及 MinGW GCC 提供的 cgo 支持。
+需要 Git、Python、Node.js/npm、新版 VS C++ 工具链和 Windows SDK。VS 工具链必须匹配 Frida 预编译 SDK 的要求；17.25.0 的 V8 依赖在 windows-2022 的 MSVC 14.44 下会缺少标准库链接符号，CI 因此与官方工作流一致使用 windows-latest。启用 compiler backend 还需按 `frida-core/src/compiler/go.mod` 安装 Go（当前要求 1.26），以及 MinGW GCC 提供的 cgo 支持。
 
 在本目录运行 PowerShell；以下使用短路径以减少 Windows 路径长度问题：
 
