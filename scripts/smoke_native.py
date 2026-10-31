@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-from build import LOCK, ROOT
+from build import BUILD_ROOT, LOCK, ROOT
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     if args.target != f"{host_os}-{host_arch}":
         raise RuntimeError("Native smoke test requires the runner's OS and architecture")
     suffix = ".exe" if host_os == "windows" else ""
-    install = ROOT / "work" / LOCK["version"] / "xjb" / args.target / "install"
+    install = BUILD_ROOT / "work" / LOCK["version"] / "xjb" / args.target / "install"
     injector = install / "bin" / f"xjb-inject{suffix}"
     # This process explicitly permits tracing its own address space on Linux.
     child_code = """import ctypes, sys, time

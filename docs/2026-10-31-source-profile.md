@@ -42,3 +42,16 @@
 - 检测代码明细：未提供目标检测样本，未确认检测函数或退出分支。修改为本记录第一轮列出标识中的明确子集。保留客户端协议、Gadget 的 TCP/UNIX 发现线程名、预编译 Android helper DEX/包名、SELinux `frida_memfd` policy 类型与内部嵌入资源 ID。选定的 9 项原始字节标记由打包审计分别检查 UTF-8 和 UTF-16LE；不把该审计解释为全部特征检查。
 - 实验结果：15 项本地单元测试、Python 语法检查和 actionlint 通过；独立源码重复准备通过；官方源码 Git 状态干净。补丁已经应用到独立源码，尚无定制二进制编译或真机测试结果。
 - 下一步计划：运行五个平台 12 架构构建，在可运行的三个原生 runner 上执行临时自有进程的 attach、QuickJS 和 RPC init 验证；下载产物并核对哈希。Android/iOS 仍需设备与获授权检测样本。
+
+## 第三轮：Windows CI 路径长度修正
+
+- 记录时间：2026-10-31 14:10 后（Asia/Shanghai）。
+- 分析思路：根据首个失败任务定位编译器报错；区分源码修改错误、资源契约错误和 Windows 路径限制。
+- 本轮操作：读取 Actions 运行 `41174956525` 的 Windows x64 job `124460516582` 日志；计算错误路径与工作目录组合后的长度；将 Windows CI 的源码和构建根改为 `D:/f`，并同步 Go 配置和诊断日志路径。
+- 操作目的：修复新增独立配置目录使 MSVC 编译路径超过旧限制的问题。
+- 所用工具：GitHub CLI、PowerShell、Python PureWindowsPath。
+- 运行命令：`gh api --allow-escape-sequences repos/xiaojianbang8888/frida-build/actions/jobs/124460516582/logs`（日志保存于 `work/xjb-windows-initial.log`）；检索 `fatal error`、`ERROR:`；计算 cwd 与相对源路径拼接长度。
+- 代码变更：`scripts/build.py` 读取可选 `FRIDA_BUILD_ROOT`；`scripts/smoke_native.py` 使用同一根目录；Windows job 设置 `FRIDA_BUILD_ROOT=D:/f` 并调整 setup-go 与日志上传。源码 profile 内容及摘要不变。
+- 检测代码明细：无新目标检测证据；本轮是构建错误，与目标应用检测无关。
+- 实验结果：失败点为兼容 x86 Gum 的 `gummemoryaccessmonitor-windows.c`，MSVC 报 C1083；未规范化的组合路径长 263 字符。其他平台仍在编译，Windows 短路径修正待重跑验证。
+- 下一步计划：本地校验更改后单独启动 Windows 构建，继续跟进其余平台。

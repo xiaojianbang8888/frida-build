@@ -13,6 +13,7 @@ import sys
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
+BUILD_ROOT = Path(os.environ.get("FRIDA_BUILD_ROOT", str(ROOT)))
 sys.path.insert(0, str(ROOT / "scripts"))
 import source_profile
 import audit_artifacts
@@ -262,12 +263,12 @@ def main():
     parser.add_argument("--profile", choices=source_profile.PROFILES,
                         default=os.environ.get("FRIDA_BUILD_PROFILE", "upstream"))
     parser.add_argument("--source", type=Path)
-    parser.add_argument("--work-root", type=Path, default=ROOT / "work")
+    parser.add_argument("--work-root", type=Path, default=BUILD_ROOT / "work")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "dist")
     args = parser.parse_args()
     if args.source is None:
         name = LOCK["version"] + ("-" + args.profile if args.profile != "upstream" else "")
-        args.source = ROOT / "work" / "src" / name
+        args.source = BUILD_ROOT / "work" / "src" / name
     if args.command != "prepare" and args.target is None:
         parser.error("--target is required for build and package")
     if args.command == "prepare":

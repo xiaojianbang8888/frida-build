@@ -72,6 +72,8 @@ jobs:
     if: inputs.platform == 'all' || inputs.platform == 'windows'
     runs-on: windows-latest
     timeout-minutes: 180
+    env:
+      FRIDA_BUILD_ROOT: D:/f
     strategy:
       fail-fast: false
       matrix:
@@ -98,7 +100,7 @@ jobs:
         run: python -u scripts/build.py prepare
       - uses: actions/setup-go@v5
         with:
-          go-version-file: ${{ needs.version.outputs.source_dir }}/subprojects/frida-core/src/compiler/go.mod
+          go-version-file: D:/f/${{ needs.version.outputs.source_dir }}/subprojects/frida-core/src/compiler/go.mod
           cache: false
       - uses: msys2/setup-msys2@v2
         id: msys2
@@ -127,8 +129,8 @@ jobs:
         with:
           name: logs-${{ matrix.target }}
           path: |
-            work/**/build.log
-            work/**/meson-logs/**
+            D:/f/work/**/build.log
+            D:/f/work/**/meson-logs/**
           if-no-files-found: ignore
 
   linux:
