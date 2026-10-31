@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import platform
 import subprocess
@@ -48,9 +49,15 @@ time.sleep(90)
         try:
             if child.stdout.readline().strip() != "ready":
                 raise RuntimeError("Owned child did not start")
-            completed = subprocess.run([str(injector), "-p", str(child.pid), "-s", str(script), "-R", "qjs", "-e"],
-                                       stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT, text=True, timeout=60)
+            terminal_fds = os.openpty() if os.name == "posix" else None
+            try:
+                completed = subprocess.run([str(injector), "-p", str(child.pid), "-s", str(script), "-R", "qjs", "-e"],
+                                           stdin=terminal_fds[1] if terminal_fds else subprocess.DEVNULL,
+                                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60)
+            finally:
+                if terminal_fds:
+                    for fd in terminal_fds:
+                        os.close(fd)
             print(completed.stdout, end="", flush=True)
             if completed.returncode != 0:
                 raise RuntimeError(f"Injector failed with exit {completed.returncode}")

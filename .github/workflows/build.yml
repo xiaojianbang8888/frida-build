@@ -16,6 +16,12 @@ on:
         required: true
         default: upstream
         options: [upstream, xjb]
+      apple_target:
+        description: Optionally select a single Apple target
+        type: choice
+        required: true
+        default: all
+        options: [all, macos-x86_64, macos-arm64, ios-arm64, ios-arm64e]
       request_id:
         description: Optional identifier for the local launcher
         type: string
@@ -47,6 +53,7 @@ jobs:
         env:
           BUILD_PLATFORM: ${{ inputs.platform }}
           BUILD_PROFILE: ${{ inputs.profile }}
+          APPLE_TARGET: ${{ inputs.apple_target }}
         shell: python
         run: |
           import json, os
@@ -57,6 +64,11 @@ jobs:
           apple = [{'target': target} for target in (
               'macos-x86_64', 'macos-arm64', 'ios-arm64', 'ios-arm64e'
           ) if selected == 'all' or target.startswith(selected + '-')]
+          apple_target = os.environ['APPLE_TARGET']
+          if apple_target != 'all':
+              apple = [entry for entry in apple if entry['target'] == apple_target]
+              if selected in ('all', 'macos', 'ios') and not apple:
+                  raise ValueError('apple_target must belong to the selected platform')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               for key, value in lock.items():
                   print(f'{key}={value}', file=output)

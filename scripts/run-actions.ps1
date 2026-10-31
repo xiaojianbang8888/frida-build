@@ -7,6 +7,8 @@ param(
     [string]$Platform = 'all',
     [ValidateSet('upstream', 'xjb')]
     [string]$Profile = 'upstream',
+    [ValidateSet('all', 'macos-x86_64', 'macos-arm64', 'ios-arm64', 'ios-arm64e')]
+    [string]$AppleTarget = 'all',
     [string]$Branch
 )
 
@@ -47,7 +49,8 @@ $fridaRequestId = [Guid]::NewGuid().ToString('N')
 $fridaRunTitle = "Frida $Profile $Platform / $fridaRequestId"
 Invoke-FridaGh -Arguments @(
     'workflow', 'run', 'build.yml', '--repo', $Repository,
-    '--ref', $Branch, '-f', "platform=$Platform", '-f', "profile=$Profile", '-f', "request_id=$fridaRequestId"
+    '--ref', $Branch, '-f', "platform=$Platform", '-f', "profile=$Profile", '-f', "apple_target=$AppleTarget",
+    '-f', "request_id=$fridaRequestId"
 ) | Out-Host
 
 $fridaRun = $null

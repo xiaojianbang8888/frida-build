@@ -55,3 +55,16 @@
 - 检测代码明细：无新目标检测证据；本轮是构建错误，与目标应用检测无关。
 - 实验结果：失败点为兼容 x86 Gum 的 `gummemoryaccessmonitor-windows.c`，MSVC 报 C1083；未规范化的组合路径长 263 字符。其他平台仍在编译，Windows 短路径修正待重跑验证。
 - 下一步计划：本地校验更改后单独启动 Windows 构建，继续跟进其余平台。
+
+## 第四轮：首批验证与 macOS 测试终端修正
+
+- 记录时间：2026-10-31 14:27 后（Asia/Shanghai）。
+- 分析思路：根据原生测试日志判断失败发生阶段，避免把测试终端问题误记为目标检测或 agent 错误。
+- 本轮操作：读取 Linux x64 与 macOS arm64 的任务日志；对已下载 Android x86 的 server/Gadget 与官方基线做指定字节串对照；将 POSIX 测试输入改为伪终端，增加 Apple 单架构重跑选择。
+- 操作目的：验证定制入口和 RPC，同时修复原生 inject 工具在 macOS `/dev/null` 输入上的终端初始化错误。
+- 所用工具：GitHub CLI、Python tarfile、指定标识扫描、POSIX PTY。
+- 运行命令：读取 job `124460516598`（`work/xjb-linux-x64.log`）及 `124460516667`（`work/xjb-macos-arm64-initial.log`）的日志；`python work/compare_identifiers.py`。
+- 代码变更：`scripts/smoke_native.py` 在 POSIX 上以 `os.openpty()` 分配测试 stdin；工作流与启动脚本允许 `apple_target=macos-arm64`，方便只重跑该目标。源码 profile 与摘要不变。
+- 检测代码明细：仍无目标应用检测证据。Android x86 基线的 server/Gadget 实际命中所选 9 项中的 8 项原始标识，定制二进制为 0；对照范围详见本地产物目录的 `identifier-comparison-android-x86.json`，不推断其他特征消失。
+- 实验结果：Android 四架构、iOS 两架构、Linux 两架构成功。Linux x64 原生测试输出 `XJB_RPC_SMOKE={"pid":8347,"arch":"x64","modules":12,"runtime":"QJS"}`，attach、脚本加载、RPC init/回复通过。macOS arm64 编译和打包通过，随后测试输出 `tcgetattr failed: Operation not supported by device` 并以 4 退出，未宣称该平台运行测试成功。Windows 初轮 x86 也遇到同一 C1083 路径错误；短路径重跑的 x86 已成功，x64 尚在进行。
+- 下一步计划：单独重跑 macOS arm64，继续下载并核对各平台产物与原生测试报告。
