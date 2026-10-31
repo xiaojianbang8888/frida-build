@@ -26,7 +26,11 @@ python -u scripts/build.py prepare --profile xjb
 
 默认写入 `work/src/17.25.0-xjb`，保留现有 `work/src/17.25.0` 官方源码。构建时同样传入 `--profile xjb`，目录为 `work/17.25.0/xjb/<目标>/`，压缩包为 `xjb-17.25.0-<目标>.tar.xz`。清单记录配置摘要及修改模块的提交。
 
-打包时扫描原生组件中的 9 项指定原始标识（UTF-8、UTF-16LE），结果写入 `identifier_audit`；这项扫描只覆盖列明的字节串。可在原生 Windows x64、Linux x64、macOS arm64 runner 对临时自有子进程执行 attach、QuickJS 和 RPC init 测试，报告另存为 `native-smoke-<目标>.json`。Android/iOS 真机验证需设备与授权测试样本。实验记录见 [docs/2026-10-31-source-profile.md](docs/2026-10-31-source-profile.md)。
+打包时扫描原生组件中的 9 项指定原始标识（UTF-8、UTF-16LE），结果写入 `identifier_audit`；这项扫描只覆盖列明的字节串。Windows x64、Linux x64、macOS arm64 runner 已对临时自有子进程通过 attach、QuickJS 和 RPC init 测试，报告另存为 `native-smoke-<目标>.json`。Android/iOS 真机验证需设备与授权测试样本。实验记录见 [docs/2026-10-31-source-profile.md](docs/2026-10-31-source-profile.md)。
+
+`xjb` 五个平台共 12 个架构的产物已完成并下载，核对了全部压缩包及 1,837 个包内文件的 SHA-256；12 组清单中的指定标识扫描均无命中。成功产物来自 [首轮的 9 组非 Windows 目标](https://github.com/xiaojianbang8888/frida-build/actions/runs/41174956525)、[Windows 短路径重跑的 2 组](https://github.com/xiaojianbang8888/frida-build/actions/runs/41175721303) 和 [macOS arm64 终端修正重跑](https://github.com/xiaojianbang8888/frida-build/actions/runs/41176831129)。首轮整体显示失败，已解决的路径和测试终端问题保留在实验记录中。
+
+Windows runner 使用 `D:/f` 短构建根，避免 MSVC 兼容架构构建路径超过限制。Apple 平台可用 `apple_target` 选择单个架构重跑，默认 `all`。
 
 | 平台 | 架构 | 构建环境 |
 | --- | --- | --- |

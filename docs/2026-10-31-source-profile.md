@@ -68,3 +68,16 @@
 - 检测代码明细：仍无目标应用检测证据。Android x86 基线的 server/Gadget 实际命中所选 9 项中的 8 项原始标识，定制二进制为 0；对照范围详见本地产物目录的 `identifier-comparison-android-x86.json`，不推断其他特征消失。
 - 实验结果：Android 四架构、iOS 两架构、Linux 两架构成功。Linux x64 原生测试输出 `XJB_RPC_SMOKE={"pid":8347,"arch":"x64","modules":12,"runtime":"QJS"}`，attach、脚本加载、RPC init/回复通过。macOS arm64 编译和打包通过，随后测试输出 `tcgetattr failed: Operation not supported by device` 并以 4 退出，未宣称该平台运行测试成功。Windows 初轮 x86 也遇到同一 C1083 路径错误；短路径重跑的 x86 已成功，x64 尚在进行。
 - 下一步计划：单独重跑 macOS arm64，继续下载并核对各平台产物与原生测试报告。
+
+## 第五轮：交付与最终核验
+
+- 记录时间：2026-10-31（Asia/Shanghai）。
+- 分析思路：将编译、原生自有子进程测试、指定字节标识审计、下载文件完整性和实际目标检测验证分别记录。以各架构成功产物的配置摘要判断是否来自同一源码配置。
+- 本轮操作：收集三个 Actions 运行的成功产物，下载后核对 ZIP、tar.xz、嵌入清单、所有包内文件；导出源码补丁并整理交付目录。
+- 操作目的：交付可检查的五平台定制构建，保留官方基线与失败记录，防止把名称替换误报为不可检测。
+- 所用工具：GitHub CLI、Python 标准库（HTTP、ZIP、tarfile、hashlib）、Git；本机网络直连，未使用旧代理。
+- 运行命令：`python work/collect_xjb.py download <运行ID>`；`python work/collect_xjb.py verify 41174956525 41175721303 41176831129`；`python work/write_xjb_delivery.py`。下载使用带范围请求的断点续传并核对 GitHub ZIP digest，遇到 TLS/连接超时后继续；下载重试不是运行检测测试。
+- 代码变更：最终源码配置仍是 core 48 个与 gum 6 个明确文本文件，摘要 `440abfbcd78d250d47f797698b9ed43c2b258a1aa21419b4a542a058d6c0d730`。交付目录包含两个独立 Git 补丁及其 SHA-256；没有替换本机已安装的 Frida 或设备上的 server，也没有连接 Android/iOS 真机。
+- 检测代码明细：未提供目标检测样本，因此不存在“所有检测链已定位/绕过”的结论。12 组打包清单的 `identifier_audit.findings` 均为空，只代表清单所列 9 项 UTF-8/UTF-16LE 原始标识。Android x86 基线对照实际命中其中 8 项，定制 server/Gadget 未命中这 8 项。
+- 实验结果：五个平台共 12 个架构产物齐全；整包校验及 **1,837 个包内文件**的 SHA-256 全部一致。Windows x86/x64 短路径构建成功；macOS arm64 使用 PTY 后原生测试成功。三个原生测试均通过自有子进程 attach、定制 agent 入口、QuickJS、RPC init/回复及模块枚举：Linux x64 观察到 pid 8347、12 个模块；Windows x64 为 pid 7212、41 个模块；macOS arm64 为 pid 42256、352 个模块。各报告的运行时均为 QJS。成功产物分别来自初轮 `41174956525` 的 9 个目标、Windows 重跑 `41175721303` 的 2 个目标、macOS arm64 重跑 `41176831129` 的 1 个目标。
+- 下一步计划：交付 `dist/xjb-17.25.0/`，包括平台压缩包、清单、校验报告、原生测试报告、源码补丁与配置。实际检测覆盖仍需用户提供自有或获授权的平台/样本及检测证据；Android/iOS attach/spawn、第三方客户端实测、V8 脚本运行和 Apple 分发签名/公证不在本轮已验证范围。
