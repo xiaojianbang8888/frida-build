@@ -13,6 +13,10 @@ import sys
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+import source_profile
+import audit_artifacts
+
 LOCK = json.loads((ROOT / "frida-version.json").read_text(encoding="utf-8"))
 TARGETS = (
     "windows-x86", "windows-x86_64",
@@ -48,7 +52,10 @@ def run(argv, *, cwd, env=None, log=None):
             raise subprocess.CalledProcessError(process.returncode, argv)
 
 
-def prepare(source):
+def prepare(source, profile_name="upstream"):
+    profile = source_profile.load_profile(profile_name)
+    if profile is not None and profile["version"] != LOCK["version"]:
+        raise RuntimeError("Source profile does not match the pinned Frida version")
     if not source.exists():
         source.parent.mkdir(parents=True, exist_ok=True)
         run(["git", "clone", "--depth", "1", "--branch", LOCK["version"],
@@ -57,11 +64,10 @@ def prepare(source):
         ["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
     if commit != LOCK["commit"]:
         raise RuntimeError(f"Unexpected source commit: {commit}; expected {LOCK['commit']}")
-    changes = subprocess.check_output(
-        ["git", "status", "--porcelain", "--untracked-files=no"], cwd=source, text=True)
-    if changes:
-        raise RuntimeError("The source checkout contains changes; use a clean upstream checkout.")
+    source_profile.check_and_apply(source, profile)
     run([sys.executable, "tools/ensure-submodules.py"], cwd=source)
+    result = source_profile.check_and_apply(source, profile, apply=True)
+    return result or source_profile.provenance(profile)
 
 
 def binary_arch(path, target):
@@ -115,17 +121,19 @@ def macho_matches(header, arch):
     return (subtype == 2) if arch == "arm64e" else (expected != 0x100000C or subtype != 2)
 
 
-def validate(install, target):
+def validate(install, target, profile_name="upstream"):
+    label = source_profile.provenance(source_profile.load_profile(profile_name))["prefix"]
     target_os, arch = target.split("-", 1)
     prefix = install / "usr" if target_os == "ios" else install
     suffix = ".exe" if target_os == "windows" else ""
-    names = [f"frida-server{suffix}", f"frida-inject{suffix}", f"frida-portal{suffix}"]
+    names = [f"{label}-{component}{suffix}" for component in ("server", "inject", "portal")]
     gadget = {
         "windows": "frida-gadget.dll", "macos": "frida-gadget.dylib",
         "ios": "frida-gadget.dylib", "linux": "frida-gadget.so",
         "android": "frida-gadget.so",
     }[target_os]
-    asset_dir = prefix / "lib" / "frida-1.0"
+    gadget = gadget.replace("frida-", label + "-", 1)
+    asset_dir = prefix / "lib" / f"{label}-1.0"
     if target_os == "windows":
         asset_dir /= arch
     elif target_os in {"linux", "android"}:
@@ -138,7 +146,7 @@ def validate(install, target):
         binary_arch(path, target)
         found[path.name] = path
     for kit in ("gum", "gumjs", "core"):
-        devkit = prefix / "lib" / "frida-1.0" / "devkits" / kit
+        devkit = prefix / "lib" / f"{label}-1.0" / "devkits" / kit
         if not any(devkit.glob("*.h")) or not (any(devkit.glob("*.a")) or any(devkit.glob("*.lib"))):
             raise RuntimeError(f"Missing headers or static library in {devkit}")
     host_os = {"darwin": "macos"}.get(sys.platform, sys.platform)
@@ -149,22 +157,29 @@ def validate(install, target):
     smoke = "not run: target requires another system or device"
     if target_os == host_os and arch == host_arch:
         version = subprocess.check_output(
-            [str(found[f"frida-server{suffix}"]), "--version"], text=True, timeout=30).strip()
+            [str(found[f"{label}-server{suffix}"]), "--version"], text=True, timeout=30).strip()
         if version != LOCK["version"]:
             raise RuntimeError(f"Unexpected server version: {version}")
-        smoke = f"frida-server --version: {version}"
+        smoke = f"{label}-server --version: {version}"
     return smoke
 
 
-def package(install, target, output):
-    smoke = validate(install, target)
+def package(install, target, output, profile_name="upstream"):
+    smoke = validate(install, target, profile_name)
+    profile = source_profile.provenance(source_profile.load_profile(profile_name))
     manifest = {
         "repository": "https://github.com/frida/frida",
         "version": LOCK["version"], "commit": LOCK["commit"],
         "target": target, "smoke_test": smoke,
+        "source_profile": profile,
         "apple_signing": "ad-hoc" if target.startswith(("macos-", "ios-")) else None,
         "files": {},
     }
+    if profile_name == "xjb":
+        manifest["identifier_audit"] = audit_artifacts.audit(install)
+        if manifest["identifier_audit"]["findings"]:
+            raise RuntimeError("Selected original identifiers remain: " +
+                               json.dumps(manifest["identifier_audit"]["findings"]))
     for path in sorted(install.rglob("*")):
         if path.is_file():
             if path.name != "build-manifest.json":
@@ -172,7 +187,7 @@ def package(install, target, output):
     (install / "build-manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     output.mkdir(parents=True, exist_ok=True)
-    name = f"frida-{LOCK['version']}-{target}"
+    name = f"{profile['prefix']}-{LOCK['version']}-{target}"
     archive = output / f"{name}.tar.xz"
     with tarfile.open(archive, "w:xz") as tar:
         tar.add(install, arcname=name)
@@ -196,8 +211,8 @@ def build(args, source):
         raise RuntimeError("Missing Go; install the version required by frida-core/src/compiler/go.mod")
     if target_os == "android" and not os.environ.get("ANDROID_NDK_ROOT"):
         raise RuntimeError(f"ANDROID_NDK_ROOT must point to Android NDK {LOCK['android_ndk']}")
-    prepare(source)
-    target_root = args.work_root.resolve() / LOCK["version"] / args.target
+    profile = prepare(source, args.profile)
+    target_root = target_directory(args)
     builddir = target_root / "build"
     install = target_root / "install"
     builddir.mkdir(parents=True, exist_ok=True)
@@ -216,7 +231,7 @@ def build(args, source):
                  "-Dfrida-core:compiler_backend=" + ("disabled" if args.target.endswith("arm64e") else "enabled")]
     if target_os == "ios":
         configure.append("-Dfrida-core:assets=installed")
-    settings = [str(arg) for arg in configure]
+    settings = {"configure": [str(arg) for arg in configure], "source_profile": profile}
     stamp = builddir / "build-config.json"
     if (builddir / "build.ninja").exists() and (
             not stamp.exists() or json.loads(stamp.read_text(encoding="utf-8")) != settings):
@@ -230,26 +245,38 @@ def build(args, source):
         if target_os == "ios":
             env["DESTDIR"] = str(install)
         run([make, "install"], cwd=builddir, env=env, log=log)
-    package(install, args.target, args.output_dir.resolve())
+    package(install, args.target, args.output_dir.resolve(), args.profile)
+
+
+def target_directory(args):
+    root = args.work_root.resolve() / LOCK["version"]
+    if args.profile != "upstream":
+        root /= args.profile
+    return root / args.target
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("prepare", "build", "package"))
     parser.add_argument("--target", choices=TARGETS)
-    parser.add_argument("--source", type=Path, default=ROOT / "work" / "src" / LOCK["version"])
+    parser.add_argument("--profile", choices=source_profile.PROFILES,
+                        default=os.environ.get("FRIDA_BUILD_PROFILE", "upstream"))
+    parser.add_argument("--source", type=Path)
     parser.add_argument("--work-root", type=Path, default=ROOT / "work")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "dist")
     args = parser.parse_args()
+    if args.source is None:
+        name = LOCK["version"] + ("-" + args.profile if args.profile != "upstream" else "")
+        args.source = ROOT / "work" / "src" / name
     if args.command != "prepare" and args.target is None:
         parser.error("--target is required for build and package")
     if args.command == "prepare":
-        prepare(args.source.resolve())
+        profile = prepare(args.source.resolve(), args.profile)
+        print(json.dumps(profile, indent=2), flush=True)
     elif args.command == "build":
         build(args, args.source.resolve())
     else:
-        package(args.work_root.resolve() / LOCK["version"] / args.target / "install",
-                args.target, args.output_dir.resolve())
+        package(target_directory(args) / "install", args.target, args.output_dir.resolve(), args.profile)
 
 
 if __name__ == "__main__":

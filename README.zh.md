@@ -2,7 +2,31 @@
 
 这套配置将官方 Frida 17.25.0 源码编译为 Windows、macOS、Android、iOS 和 Linux 的原生组件。只需 Windows 操作 GitHub 网页，Apple 平台使用 GitHub 的 macOS runner。
 
-版本于 2026-10-31 通过官方 GitHub Release API 核对，固定提交为 `f74818ada177756bd95c26235cdd26ebe4f07e76`。版本与工具链配置位于 `frida-version.json`；脚本会核对源码提交并拒绝有修改的源码目录。
+版本于 2026-10-31 通过官方 GitHub Release API 核对，固定提交为 `f74818ada177756bd95c26235cdd26ebe4f07e76`。版本与工具链配置位于 `frida-version.json`；脚本核对源码提交。`upstream` 配置要求源码干净，`xjb` 配置只接受固定哈希的原始文件或本配置已应用的结果。
+
+## 定制标识构建（xjb）
+
+Actions 的 `profile` 可选择 `upstream`（官方基线）或 `xjb`（定制标识）。两者使用独立源码、构建目录与产物名。`xjb` 的明确修改清单位于 [profiles/xjb.json](profiles/xjb.json)，每个文件记录原始/修改后 SHA-256、替换原文和命中次数；不是不受限制的全局字符串替换。
+
+`xjb` 将原生程序命名为 `xjb-server`、`xjb-inject`、`xjb-portal`，Gadget 命名为 `xjb-gadget`，资产目录为 `lib/xjb-1.0`。它定制线程显示名、部分 helper/agent 临时路径和内部 socket 名，并将私有 agent 入口配套改为 `xjb_agent_main`。Apple Gadget 的安装名称对应 `XjbGadget.dylib`。所有上游许可证和归属信息保留。
+
+此配置以现有 Frida 17.25.0 远程客户端兼容为目标：DBus/RPC 标记、公开 C/JS API、默认端口以及客户端用于发现 Gadget 的线程标记仍是原协议。上游预编译依赖、内嵌 Android helper DEX/Java 包名、SELinux policy 类型、内部资源标识、诊断字符串中还可能出现上游名称。更改文件名不会消除注入行为、可执行映射、内存特征或 hook 修改；不能据此声称“所有特征已去除”或“无法检测”。实际兼容性和检测结果以具体自有/获授权样本的验证为准。
+
+在 Actions 手动运行时选择 `profile=xjb`、`platform=all`；本地启动脚本用：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run-actions.ps1 -Repository xiaojianbang8888/frida-build -Profile xjb -Platform all
+```
+
+本地准备源码：
+
+```powershell
+python -u scripts/build.py prepare --profile xjb
+```
+
+默认写入 `work/src/17.25.0-xjb`，保留现有 `work/src/17.25.0` 官方源码。构建时同样传入 `--profile xjb`，目录为 `work/17.25.0/xjb/<目标>/`，压缩包为 `xjb-17.25.0-<目标>.tar.xz`。清单记录配置摘要及修改模块的提交。
+
+打包时扫描原生组件中的 9 项指定原始标识（UTF-8、UTF-16LE），结果写入 `identifier_audit`；这项扫描只覆盖列明的字节串。可在原生 Windows x64、Linux x64、macOS arm64 runner 对临时自有子进程执行 attach、QuickJS 和 RPC init 测试，报告另存为 `native-smoke-<目标>.json`。Android/iOS 真机验证需设备与授权测试样本。实验记录见 [docs/2026-10-31-source-profile.md](docs/2026-10-31-source-profile.md)。
 
 | 平台 | 架构 | 构建环境 |
 | --- | --- | --- |
@@ -80,7 +104,7 @@ python -u scripts/build.py build --target windows-x86_64 --source D:\frida-src\1
 ## 当前验证记录
 
 - 已通过 actionlint 1.7.12 的工作流检查。
-- 已通过 Python 语法检查，以及 7 项打包检查测试：错误架构、缺失组件、缺失开发包、清单与压缩包校验、arm64e 子类型校验、兼容架构 Gadget、Apple 通用二进制。
+- 已通过 Python 语法检查，以及 15 项测试，覆盖打包、架构、源码 profile 的重复应用/意外修改拒绝、配置摘要与指定字节标识扫描。
 - 已在公开仓库 [xiaojianbang8888/frida-build](https://github.com/xiaojianbang8888/frida-build) 完成 Windows、macOS、Android、iOS、Linux 共 12 组架构构建。
 - [首轮运行](https://github.com/xiaojianbang8888/frida-build/actions/runs/41121484242) 中，macOS、iOS、Android、Linux 的 10 组架构均成功，Windows 两组遇到旧 MSVC 与 V8 依赖不匹配的问题。
 - 改用 windows-latest 后，[Windows 重跑](https://github.com/xiaojianbang8888/frida-build/actions/runs/41122665431) 的 x86、x86_64 两组均成功。

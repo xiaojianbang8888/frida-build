@@ -1,5 +1,5 @@
 name: Build Frida
-run-name: Frida ${{ inputs.platform }} / ${{ inputs.request_id || github.run_number }}
+run-name: Frida ${{ inputs.profile }} ${{ inputs.platform }} / ${{ inputs.request_id || github.run_number }}
 
 on:
   workflow_dispatch:
@@ -10,6 +10,12 @@ on:
         required: true
         default: all
         options: [all, windows, macos, android, ios, linux]
+      profile:
+        description: Source profile (xjb customizes selected native identifiers)
+        type: choice
+        required: true
+        default: upstream
+        options: [upstream, xjb]
       request_id:
         description: Optional identifier for the local launcher
         type: string
@@ -17,6 +23,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  FRIDA_BUILD_PROFILE: ${{ inputs.profile }}
 
 jobs:
   version:
@@ -28,6 +37,8 @@ jobs:
       python: ${{ steps.lock.outputs.python }}
       node: ${{ steps.lock.outputs.node }}
       apple_matrix: ${{ steps.lock.outputs.apple_matrix }}
+      source_dir: ${{ steps.lock.outputs.source_dir }}
+      prefix: ${{ steps.lock.outputs.prefix }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,12 +46,14 @@ jobs:
       - id: lock
         env:
           BUILD_PLATFORM: ${{ inputs.platform }}
+          BUILD_PROFILE: ${{ inputs.profile }}
         shell: python
         run: |
           import json, os
           from pathlib import Path
           lock = json.loads(Path('frida-version.json').read_text())
           selected = os.environ['BUILD_PLATFORM']
+          profile = os.environ['BUILD_PROFILE']
           apple = [{'target': target} for target in (
               'macos-x86_64', 'macos-arm64', 'ios-arm64', 'ios-arm64e'
           ) if selected == 'all' or target.startswith(selected + '-')]
@@ -48,6 +61,9 @@ jobs:
               for key, value in lock.items():
                   print(f'{key}={value}', file=output)
               print('apple_matrix=' + json.dumps({'include': apple}), file=output)
+              suffix = '-' + profile if profile != 'upstream' else ''
+              print(f'source_dir=work/src/{lock["version"]}{suffix}', file=output)
+              print('prefix=' + ('frida' if profile == 'upstream' else 'xjb'), file=output)
       - name: Check packaging safeguards
         run: python -m unittest discover -s tests -v
 
@@ -82,7 +98,7 @@ jobs:
         run: python -u scripts/build.py prepare
       - uses: actions/setup-go@v5
         with:
-          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          go-version-file: ${{ needs.version.outputs.source_dir }}/subprojects/frida-core/src/compiler/go.mod
           cache: false
       - uses: msys2/setup-msys2@v2
         id: msys2
@@ -94,10 +110,13 @@ jobs:
           MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
           BUILD_TARGET: ${{ matrix.target }}
         run: python -u scripts/build.py build --target $env:BUILD_TARGET
+      - name: Exercise native attach and script RPC on an owned child
+        if: inputs.profile == 'xjb' && matrix.target == 'windows-x86_64'
+        run: python -u scripts/smoke_native.py --target windows-x86_64
       - name: Upload archives and checksums
         uses: actions/upload-artifact@v7
         with:
-          name: frida-${{ needs.version.outputs.version }}-${{ matrix.target }}
+          name: ${{ needs.version.outputs.prefix }}-${{ needs.version.outputs.version }}-${{ matrix.target }}
           path: dist/*
           if-no-files-found: error
           compression-level: 0
@@ -130,7 +149,7 @@ jobs:
         run: python -u scripts/build.py prepare
       - uses: actions/setup-go@v5
         with:
-          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          go-version-file: ${{ needs.version.outputs.source_dir }}/subprojects/frida-core/src/compiler/go.mod
           cache: false
       - name: Configure target sysroot
         run: echo "FRIDA_QEMU_SYSROOT=/opt/x-tools/$XTOOLS_HOST/$XTOOLS_HOST/sysroot" >> "$GITHUB_ENV"
@@ -138,10 +157,13 @@ jobs:
         env:
           BUILD_TARGET: linux-${{ matrix.arch }}
         run: python -u scripts/build.py build --target "$BUILD_TARGET"
+      - name: Exercise native attach and script RPC on an owned child
+        if: inputs.profile == 'xjb' && matrix.arch == 'x86_64'
+        run: python -u scripts/smoke_native.py --target linux-x86_64
       - name: Upload archives and checksums
         uses: actions/upload-artifact@v7
         with:
-          name: frida-${{ needs.version.outputs.version }}-linux-${{ matrix.arch }}
+          name: ${{ needs.version.outputs.prefix }}-${{ needs.version.outputs.version }}-linux-${{ matrix.arch }}
           path: dist/*
           if-no-files-found: error
           compression-level: 0
@@ -179,7 +201,7 @@ jobs:
         run: python -u scripts/build.py prepare
       - uses: actions/setup-go@v5
         with:
-          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          go-version-file: ${{ needs.version.outputs.source_dir }}/subprojects/frida-core/src/compiler/go.mod
           cache: false
       - uses: nttld/setup-ndk@v1
         id: ndk
@@ -194,7 +216,7 @@ jobs:
       - name: Upload archives and checksums
         uses: actions/upload-artifact@v7
         with:
-          name: frida-${{ needs.version.outputs.version }}-android-${{ matrix.arch }}
+          name: ${{ needs.version.outputs.prefix }}-${{ needs.version.outputs.version }}-android-${{ matrix.arch }}
           path: dist/*
           if-no-files-found: error
           compression-level: 0
@@ -231,7 +253,7 @@ jobs:
         run: python -u scripts/build.py prepare
       - uses: actions/setup-go@v5
         with:
-          go-version-file: work/src/${{ needs.version.outputs.version }}/subprojects/frida-core/src/compiler/go.mod
+          go-version-file: ${{ needs.version.outputs.source_dir }}/subprojects/frida-core/src/compiler/go.mod
           cache: false
       - name: Check Xcode
         run: |
@@ -241,10 +263,13 @@ jobs:
         env:
           BUILD_TARGET: ${{ matrix.target }}
         run: python -u scripts/build.py build --target "$BUILD_TARGET"
+      - name: Exercise native attach and script RPC on an owned child
+        if: inputs.profile == 'xjb' && matrix.target == 'macos-arm64'
+        run: sudo "$(command -v python)" -u scripts/smoke_native.py --target macos-arm64
       - name: Upload archives and checksums
         uses: actions/upload-artifact@v7
         with:
-          name: frida-${{ needs.version.outputs.version }}-${{ matrix.target }}
+          name: ${{ needs.version.outputs.prefix }}-${{ needs.version.outputs.version }}-${{ matrix.target }}
           path: dist/*
           if-no-files-found: error
           compression-level: 0

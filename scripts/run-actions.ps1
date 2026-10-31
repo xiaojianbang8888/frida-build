@@ -5,6 +5,8 @@ param(
     [string]$Repository,
     [ValidateSet('all', 'windows', 'macos', 'android', 'ios', 'linux')]
     [string]$Platform = 'all',
+    [ValidateSet('upstream', 'xjb')]
+    [string]$Profile = 'upstream',
     [string]$Branch
 )
 
@@ -42,10 +44,10 @@ Invoke-FridaGh -Arguments @(
     'workflow', 'view', 'build.yml', '--repo', $Repository
 ) | Out-Host
 $fridaRequestId = [Guid]::NewGuid().ToString('N')
-$fridaRunTitle = "Frida $Platform / $fridaRequestId"
+$fridaRunTitle = "Frida $Profile $Platform / $fridaRequestId"
 Invoke-FridaGh -Arguments @(
     'workflow', 'run', 'build.yml', '--repo', $Repository,
-    '--ref', $Branch, '-f', "platform=$Platform", '-f', "request_id=$fridaRequestId"
+    '--ref', $Branch, '-f', "platform=$Platform", '-f', "profile=$Profile", '-f', "request_id=$fridaRequestId"
 ) | Out-Host
 
 $fridaRun = $null

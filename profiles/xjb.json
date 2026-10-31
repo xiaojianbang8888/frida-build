@@ -1,0 +1,799 @@
+{
+  "name": "xjb",
+  "prefix": "xjb",
+  "version": "17.25.0",
+  "scope": "Explicit runtime labels, temporary file names, native artifact names and private agent entry point; standard client protocol retained.",
+  "limitations": [
+    "No claim of undetectability; injection, executable mappings and hook changes remain observable.",
+    "DBus/RPC/public APIs, Gadget discovery thread identifiers and default ports retain standard-client compatibility.",
+    "Precompiled dependencies, Android helper DEX/Java package, SELinux policy types, internal resource IDs and diagnostic strings may contain upstream identifiers.",
+    "Device attach/spawn and target detection have not been verified merely by building."
+  ],
+  "modules": [
+    {
+      "path": "subprojects/frida-core",
+      "commit": "f91556129517937e82831458d10f6b8f4ca06dbb",
+      "files": [
+        {
+          "path": "compat/build.py",
+          "before_sha256": "5ecb1be20483c947611c9f97b3095ad3d589cbf5eabeb9498aa9662c0e8e5119",
+          "after_sha256": "0919f26d0dd884ba5ba5bc059268b6558b9d1f6f08f48bf772640b28c896e4eb",
+          "replacements": [
+            {
+              "old": "/ \"frida-helper.exe\"",
+              "new": "/ \"xjb-helper.exe\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-helper\"",
+              "new": "/ \"xjb-helper\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-agent.dll\"",
+              "new": "/ \"xjb-agent.dll\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-agent.dylib\"",
+              "new": "/ \"xjb-agent.dylib\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-agent.so\"",
+              "new": "/ \"xjb-agent.so\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-gadget.dll\"",
+              "new": "/ \"xjb-gadget.dll\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-gadget.dylib\"",
+              "new": "/ \"xjb-gadget.dylib\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-gadget.so\"",
+              "new": "/ \"xjb-gadget.so\"",
+              "count": 1
+            },
+            {
+              "old": "/ \"frida-server\"",
+              "new": "/ \"xjb-server\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "inject/meson.build",
+          "before_sha256": "365ad22ee6205ed119106a53ce4fb5ab08259e749a7f8db115a1509fd86b9327",
+          "after_sha256": "e73d6a04dbbdb9ca54ea4a339d494360ebc5694f3a66169c91d58649d07d2298",
+          "replacements": [
+            {
+              "old": "output: 'frida-inject'",
+              "new": "output: 'xjb-inject'",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/agent-glue.c",
+          "before_sha256": "f5183f84e0598685c3e2deb2572965c58d30685a18812e8d048c81ad3e4b5f13",
+          "after_sha256": "6c83205df7824c1e08564ec2b3ab1d2b4cd06f6e20ac68b10bc750d5b5fd1abf",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/agent.vala",
+          "before_sha256": "4504af5aa5d51a63b5839df2169fd159ddff6755a624bbd43c254c0420baa498",
+          "after_sha256": "1fbb5f996a5ea64f6fa98715d8e05aee4a27e3c33e4c0cd1b5f11cba55fe5131",
+          "replacements": [
+            {
+              "old": "\tpublic void main (string agent_parameters,",
+              "new": "\t[CCode (cname = \"xjb_agent_main\")]\n\tpublic void main (string agent_parameters,",
+              "count": 1
+            },
+            {
+              "old": "\"frida-eternal-agent\"",
+              "new": "\"xjb-eternal\"",
+              "count": 3
+            },
+            {
+              "old": "\"frida-agent-emulated\"",
+              "new": "\"xjb-emulated\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/frida-agent-android.version",
+          "before_sha256": "7e4ab5380651cccb4ae34edf71324b4e6ebb8a8775c45fe4a01fedaa1ec86ebe",
+          "after_sha256": "753b712acf600c6679c103445650132b4c768196eef20ede9ee804d21a052b92",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/frida-agent-glibc.version",
+          "before_sha256": "a68429be5d683d7988e01d77fc84a7444d14a3ad8d53ed6bd08f88a7dcdff329",
+          "after_sha256": "b87c7825e274f8348426cbe0748bb837e5d8cf897d26e22eb1d95b4808d79aa4",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/frida-agent-prospero.version",
+          "before_sha256": "7bb67ca8c8ffa7c8e3778f5a6dd4a21d5a89c074ff08f791d36e017f2e533f98",
+          "after_sha256": "c67f05e4cc476d9a5f40ca1a4bbb819323237e2101be328a9663ded11600cf7b",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/frida-agent-x86.symbols",
+          "before_sha256": "674d01925b196f1c6ef8da197360e86b06193b9287b8fcae10f48faf48b9743c",
+          "after_sha256": "abbea33ef5f46ee5c8c5417cb1d58ebd44693e045ac6e6a5d52e4fb562fa61d5",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/frida-agent.def",
+          "before_sha256": "f0517b5094d4841d78a86b2f623b61a7aa5e2c89f34c6c24e5ac98fa614ca003",
+          "after_sha256": "41a8f3863115a4ba4ec246cbe852577d67d27537ea01e2b5b15e16049377394a",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/frida-agent.symbols",
+          "before_sha256": "98c75ce7e38dc6460fcd749f602509e5d1a324b2f31efbb4023d77d70a9b0568",
+          "after_sha256": "e43ea1f1a3a092d0645e9478d9a2809e6bc14ad3cd00f98e45210684acb64b16",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/frida-agent.version",
+          "before_sha256": "06ae2c5d0dcdebe6fd5ef7a3a8a4d2a8401d974fb47aa2829952a3a1f2bbc81f",
+          "after_sha256": "3f02f4c80031a1bffcef6062c2895022b74fc5bd199348adfc222c6dc528ee59",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/agent/meson.build",
+          "before_sha256": "7b86d0b04a5ceab4a69098ef7b8e3552df8383c64bfe3cd905c9502ef48b9472",
+          "after_sha256": "4a5ce159ba18fb605dfa49bd1a2d03bcf87c5cbbade4073dbd3658355fa3bea2",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            },
+            {
+              "old": "identity = 'FridaAgent'",
+              "new": "identity = 'XjbAgent'",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/gadget/gadget-glue.c",
+          "before_sha256": "08846ef2ce1b552ac1481acedeee89e0958099f6c9b09cd88d6fb009ed6b5faa",
+          "after_sha256": "fe9aef2d5313ea03047e89490f955c64342e145c7316b6cca9fb750b84d5a681",
+          "replacements": [
+            {
+              "old": "\"frida-gadget\"",
+              "new": "\"xjb-gadget\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "lib/gadget/meson.build",
+          "before_sha256": "e1b69e8b63c6a5b2e1d77b4a6a0079c8515f7e687f69a913b57fc4b0f522a1c3",
+          "after_sha256": "afe7b6179f73918d54c74dc27dfa028e4a3d36ef56a28cdd9979017bdcf12241",
+          "replacements": [
+            {
+              "old": "FridaGadget.dylib",
+              "new": "XjbGadget.dylib",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "path": "lib/netif/tunnel-interface-observer.vala",
+          "before_sha256": "47cb48f737aa1551fa957dbb2bb007067d0da87af359c86e74813710a8b489fc",
+          "after_sha256": "1a6759d0dc4b6e75937375f73030236feb298e983998ba4a2c1809f0be10068a",
+          "replacements": [
+            {
+              "old": "\"re.frida.endpoint-enumerator\"",
+              "new": "\"re.xjb.endpoint-enumerator\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "meson.build",
+          "before_sha256": "76fa3db3051d47c6f547655e0572202346aca0231a1ecf72a78a3500497e9b89",
+          "after_sha256": "3c62112ca924e4264d9f2554fe00829d64caf1b05f678c498bb5793d69eaf83b",
+          "replacements": [
+            {
+              "old": "helper_name = 'frida-helper'",
+              "new": "helper_name = 'xjb-helper'",
+              "count": 1
+            },
+            {
+              "old": "agent_name = 'frida-agent'",
+              "new": "agent_name = 'xjb-agent'",
+              "count": 1
+            },
+            {
+              "old": "gadget_name = 'frida-gadget'",
+              "new": "gadget_name = 'xjb-gadget'",
+              "count": 1
+            },
+            {
+              "old": "frida_libdir_name = f'frida-@api_version@'",
+              "new": "frida_libdir_name = f'xjb-@api_version@'",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "portal/meson.build",
+          "before_sha256": "cd3ede006da2b5eafca9869f30c7688af34cd4a8b13ca9122d38bc1a6e6042cd",
+          "after_sha256": "5dea6fd05072fe0fe0c35cb4babf113e8b316012427a92a2dbaf501e8b4fdc9a",
+          "replacements": [
+            {
+              "old": "output: 'frida-portal'",
+              "new": "output: 'xjb-portal'",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "server/meson.build",
+          "before_sha256": "42be86c513b7a297ad0677a614e6d4952b12bbc69816a3fdb6d78fb7fc9e8d14",
+          "after_sha256": "08246764334e252c0c0fa3541d1f2270cc0c0fcb0041ea58fc50bddea836bc7d",
+          "replacements": [
+            {
+              "old": "server_name = 'frida-server'",
+              "new": "server_name = 'xjb-server'",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "server/server.vala",
+          "before_sha256": "c1b94a5bc40be0619adb88592e728bd1da66d8d8f0ecaf3b9e126e46d9e3dd46",
+          "after_sha256": "129127960b4148dbdce96eaa9f1a9bbd90062649c06ec7a520db1c87fc8bfd74",
+          "replacements": [
+            {
+              "old": "\"re.frida.server\"",
+              "new": "\"re.xjb.server\"",
+              "count": 1
+            },
+            {
+              "old": "\"frida-server-main-loop\"",
+              "new": "\"xjb-server-loop\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/agent-container.vala",
+          "before_sha256": "32da2fae7b2fe77217f4fd6f5254d9349f18fc4f672204a247856bead783123b",
+          "after_sha256": "c7efc88bc43503da12101f223770d9fdcfc9ce60ae97856c2f1194224f0f3d93",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            },
+            {
+              "old": "\"frida-agent-container\"",
+              "new": "\"xjb-container\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/android-helper/client.vala",
+          "before_sha256": "7bc718dfeb76f1b7f9049ad70adc17ecf704a447660904bfd457d25c9fbcaac7",
+          "after_sha256": "4b74df4f66a2e1ccb5801db2947c5fcd9dc8d3566dc2b7552b456e3c662e810c",
+          "replacements": [
+            {
+              "old": "\"/data/local/tmp/frida-helper-",
+              "new": "\"/data/local/tmp/xjb-helper-",
+              "count": 1
+            },
+            {
+              "old": "--nice-name=re.frida.helper",
+              "new": "--nice-name=re.xjb.helper",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/darwin/darwin-host-session.vala",
+          "before_sha256": "eaf94e47f5e80a00321306c2810b9502161b5e2ff8e3451fd869bff96b3213c6",
+          "after_sha256": "bea5b1fce74c1152ddbd14e27382e6aca2b29d46aa884cb90cf5326963d32839",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            },
+            {
+              "old": "new AgentResource (blob.name, copy_to_aligned_pages",
+              "new": "new AgentResource (\"xjb-agent.dylib\", copy_to_aligned_pages",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/darwin/frida-helper-backend-glue.m",
+          "before_sha256": "eb2ccde6a7051c2621a26f423ebe72fd0bfeea4b4d31a5976800186d50adca75",
+          "after_sha256": "0428f018eb289f1f353229a587d8aa3bf9c777eedcfaa51a879b0afedc37fd48",
+          "replacements": [
+            {
+              "old": "\"re.frida.helper.queue\"",
+              "new": "\"re.xjb.helper.queue\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/darwin/frida-helper-process.vala",
+          "before_sha256": "9fe903dbaa03642a89c685218bdf11d7bfc0e6d077996b307fe1888eee371a4b",
+          "after_sha256": "46a91291be9e925977ed29e108a952618e78394bb7bbe61aa093fcd6179de961",
+          "replacements": [
+            {
+              "old": "\"frida-helper\"",
+              "new": "\"xjb-helper\"",
+              "count": 1
+            },
+            {
+              "old": "\"frida-helper-arm64\"",
+              "new": "\"xjb-helper-arm64\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/darwin/frida-helper-service.vala",
+          "before_sha256": "ee85e0356881a9a8c8561b28e585fd99a6a24728266fe117536d8813c0810345",
+          "after_sha256": "7eaf62b0fc5bb007b73f7394e1abecf8ffce698e71ac9472924c9790373294ea",
+          "replacements": [
+            {
+              "old": "\"frida-helper-main-loop\"",
+              "new": "\"xjb-helper-loop\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/droidy/injector.vala",
+          "before_sha256": "587cbeb51cc6957a3654f687fccb2aff9d07e4715288279cd56e7ee13b83fd8c",
+          "after_sha256": "0e9a7b3d1031f2d2849b8e385088b45548dde748bbd85e040138253a5af451de",
+          "replacements": [
+            {
+              "old": "\"/data/local/tmp/frida-gadget-",
+              "new": "\"/data/local/tmp/xjb-gadget-",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "path": "src/freebsd/freebsd-host-session.vala",
+          "before_sha256": "5d21b80589339ce7712829f268399b7744e263d096a24e5679d26bcb99ccbff0",
+          "after_sha256": "1441fa88a782c85e6f8bf0b379418c8e920c2674cbc4e2a9f855af76936c0162",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "path": "src/frida-glue.c",
+          "before_sha256": "70f9ba86b23b99cc0557d034bdfe3bfe94d1e20dc027b608c8f315518064c181",
+          "after_sha256": "926d8b0ee526f7cdb292b36b1cf90ec6e66e82a3df32b1a7dc80c7139d95b04b",
+          "replacements": [
+            {
+              "old": "\"frida-main-loop\"",
+              "new": "\"xjb-main-loop\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/linux/frida-helper-backend.vala",
+          "before_sha256": "213c631cddc4abe6f8fda4ed94e785b512902dece7b370c953164452326d186b",
+          "after_sha256": "a9393d4b344e8a1021d1563564effd56b0c6f4aa00ea173e6af09c1c86e9f20e",
+          "replacements": [
+            {
+              "old": "\"/frida-\"",
+              "new": "\"/xjb-\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/linux/frida-helper-process.vala",
+          "before_sha256": "59e765d9d317e1865872d2f4d664eeafe7c8a6eb0cd2b52dfc9fec9203165441",
+          "after_sha256": "8ec7af2223b52b54904059a6cfc4410e84c3e3a232a58b8087928a4961fe2eb1",
+          "replacements": [
+            {
+              "old": "\"frida-helper-",
+              "new": "\"xjb-helper-",
+              "count": 2
+            },
+            {
+              "old": "\"/frida-\"",
+              "new": "\"/xjb-\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/linux/kernel-injector.vala",
+          "before_sha256": "ee98c52c2a72c1249e48846bb30afff98d6d0cf10fd945f3a2ee93d82168cc2f",
+          "after_sha256": "91f68c9891141c2073520f1a594b1ead001d361285911cae352fde48ecb620d1",
+          "replacements": [
+            {
+              "old": "\"/frida-\"",
+              "new": "\"/xjb-\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/linux/linux-host-session.vala",
+          "before_sha256": "9c38b39992536d36ec6919f687a17024a04e93afb61ad31db4fb688cb873b263",
+          "after_sha256": "55560d4ed4e1f4727d05448f9572e89cee66a915ba59077b0acacf064f06d06c",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            },
+            {
+              "old": "\"frida-agent-",
+              "new": "\"xjb-agent-",
+              "count": 5
+            },
+            {
+              "old": "\"/data/local/tmp/frida-helper-",
+              "new": "\"/data/local/tmp/xjb-helper-",
+              "count": 1
+            },
+            {
+              "old": "\"frida-android-helper\"",
+              "new": "\"xjb-android\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/linux/mapped-agent.vala",
+          "before_sha256": "1374a4b2bc5c867c3632518c8f57ba6c01e42c167eb81e231c0b737f5e6469d9",
+          "after_sha256": "c14679991cd7cc0f0b25c903faad5b003a34b167606c4c92c2f5ae10761c2126",
+          "replacements": [
+            {
+              "old": "\"frida-agent.so\"",
+              "new": "\"xjb-agent.so\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/linux/proc-mem-injector.vala",
+          "before_sha256": "eca3a8d951fef814114a5c9da537bcd9c18089c35d5361f2275fdd73764045e4",
+          "after_sha256": "24fe2e50e82c85a66cdfe8143b2407205afc87296e0cde0859f87d1e0be0ec34",
+          "replacements": [
+            {
+              "old": "\"/frida-\"",
+              "new": "\"/xjb-\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/qnx/qnx-host-session.vala",
+          "before_sha256": "fca80f37b948a9afd98be0ca99538ba34bc9e271d63b32f9bb04c65b54931bb8",
+          "after_sha256": "f0029893914de6b115be025fbbb9c316ad9698410481b7d40a4fa8b3a9190308",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/simmy/simmy-host-session-glue.m",
+          "before_sha256": "0fc7101cf797c820c97b6397162a9225408dde4df2fc829e0c65544af0b9eb68",
+          "after_sha256": "aef03bae3ce8639f41ff1d3c45866fb6acf0ab9ec9fb3da02d6efc1605cef01e",
+          "replacements": [
+            {
+              "old": "\"re.frida.simmy.queue\"",
+              "new": "\"re.xjb.simmy.queue\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/windows/frida-helper-process.vala",
+          "before_sha256": "f931659b355b1eb6e2968e1adeee6dfb5ae8dcec13174372936e0dea46750e15",
+          "after_sha256": "20d5e5da453416ca038e051c8804370cadfce2724d25768d17a61b135b32bf94",
+          "replacements": [
+            {
+              "old": "\"frida-helper-factory\"",
+              "new": "\"xjb-helper\"",
+              "count": 1
+            },
+            {
+              "old": "@\"frida-helper-",
+              "new": "@\"xjb-helper-",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "src/windows/windows-host-session.vala",
+          "before_sha256": "ad7aec559d51e25025167baa9d1873fd95824cfe3c75fa7ca0ba173fd230db93",
+          "after_sha256": "ea7007fa28ee1c2b4bc7094974ec12a5a7728c0c03a860ad42e697d6f0a62e7f",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 2
+            },
+            {
+              "old": "frida-agent.dll\"",
+              "new": "xjb-agent.dll\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/Makefile.android-arm.mk",
+          "before_sha256": "1f5f7b374f6dc5646b410d20b9cd218f2b01533b9ccd429ea15eb6a77c19d1dd",
+          "after_sha256": "4e65268e8f2efbff01371a11bf7bee3d52808702902a712e491d1ef27cf6bb75",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/Makefile.android-arm64.mk",
+          "before_sha256": "a59730a70ba5dcfce21d2d481a723e9a7f4caba5f7bd375f9beff3056a6baa10",
+          "after_sha256": "095d45a056ca241c5a69b247779ccc80dc4400e5052fe9269df767c0b84039cc",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/Makefile.android-x86.mk",
+          "before_sha256": "186165206352d97033223fd5faa99d9b45abe2c14600ea1943d2a11e26697fea",
+          "after_sha256": "4565ecd8357620a7dec17fb1f97ed8d299fbf30ce63c6fc018a9b70437ffe38b",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/Makefile.android-x86_64.mk",
+          "before_sha256": "9959985f88f42e76edba05d0e2d086828c0be75a58e55688804bb598beb8adb6",
+          "after_sha256": "c1f6e15fab8804cfd9af38ca1d6a38d1dc6d6e0bcdad01d7c66b023e0f93b102",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/Makefile.qnx.mk",
+          "before_sha256": "8960c5a363947ef095f6dce57bdb78565f5a0804905a0269f38d4e0d85bd57da",
+          "after_sha256": "740ea1ba0604267f2bf5f145afe047efb6d20ca775c575401c846ec100f326e8",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/agent.def",
+          "before_sha256": "f0517b5094d4841d78a86b2f623b61a7aa5e2c89f34c6c24e5ac98fa614ca003",
+          "after_sha256": "41a8f3863115a4ba4ec246cbe852577d67d27537ea01e2b5b15e16049377394a",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/resident-agent.c",
+          "before_sha256": "403f066ad3927dc826939f913ad6dcfcd4b411d89f4f503db9f5776a8e41f7f4",
+          "after_sha256": "30eab11c6d9048371fe390508db554903d211edbbde025c3acb9d4ed88401d86",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/labrats/simple-agent.c",
+          "before_sha256": "fe407f245ae7b72afb8465ebb7db9a1496a4c7af753a5e026ff5768746407263",
+          "after_sha256": "78177b7d3de0617e0a9c404a2881be37b54601765439c911411d4d6cc4cac972",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/test-agent.vala",
+          "before_sha256": "29965d26fe7d961403c3ac2ab3be8468498c325117eed15413c05ff8cc070fa1",
+          "after_sha256": "5b0d01097a0021e10073d6400babb55ae74cf8682bd3f7e16dcda9489181d0d5",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "tests/test-injector.vala",
+          "before_sha256": "5b1ccf46fad3d15119f78351f7295d34c5015c8bb94a72e569a496c219cae47e",
+          "after_sha256": "3b3da118f92aecfa69687c1fb20d926f6150f120f7b1406d2bdacb1299b391eb",
+          "replacements": [
+            {
+              "old": "frida_agent_main",
+              "new": "xjb_agent_main",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "subprojects/frida-gum",
+      "commit": "5ebe3aeccab8dcd4b727378dab67fb15fa8a3cca",
+      "files": [
+        {
+          "path": "bindings/gumjs/gummemoryvfs.c",
+          "before_sha256": "5a03f2e37a33a7615faafe48fc75d27b785d977895fdcf9961cbdd4b0d194825",
+          "after_sha256": "6aa49f03b276905e3ac74d2315f2f7bd95f6f53e7f4c15942645f0b12189df9b",
+          "replacements": [
+            {
+              "old": "\"gum-%d\"",
+              "new": "\"xjb-%d\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "bindings/gumjs/gumscriptscheduler.c",
+          "before_sha256": "8c4e006efccb2d9858ea4cd32e8a66224f805f80ebd12fb3ec3f25032689f60d",
+          "after_sha256": "5ed3530895154c5ddbe34f61bd12bb9b39ed9cb33bbe055bce160fdd498c7899",
+          "replacements": [
+            {
+              "old": "\"gum-js-loop\"",
+              "new": "\"xjb-js-loop\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "gum/backend-darwin/gumcodesegment-darwin.c",
+          "before_sha256": "eb3e977792c229d066ed2836d1016c4b1fe8837a6db986289099d235f4a01d91",
+          "after_sha256": "06885c674fd1cc6aefdb4de0d459f56f339f033021e2051539e19e88fc470532",
+          "replacements": [
+            {
+              "old": "\"frida-XXXXXX.dylib\"",
+              "new": "\"xjb-XXXXXX.dylib\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "gum/backend-linux/gumprocess-linux.c",
+          "before_sha256": "5e1bd3b5cf2c3025542028b44cf7ab135ab987079ab93bb982f99e4a5eab5c16",
+          "after_sha256": "8e91c8051fb2aa7687157c4e4c4b058feb79368ac7d6145f80f5062bf1011aff",
+          "replacements": [
+            {
+              "old": "\"gum-modify-thread-worker\"",
+              "new": "\"xjb-thread\"",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "gum/gumcmodule.c",
+          "before_sha256": "c333525b7e8f41bdb4358f0f4e228ede0b94f5ba67da2776b45361656d761ae0",
+          "after_sha256": "7dd25b6f33fb5ab44064c0e6a3ad07878304d2a67b200e64ec7c1d683fe32ce7",
+          "replacements": [
+            {
+              "old": "LIBRARY frida-cmodule-runtime.dll",
+              "new": "LIBRARY xjb-cmodule-runtime.dll",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "path": "meson.build",
+          "before_sha256": "b635110a7c8bd8e4c8fc6f7d0504657a23ea46801128de61d60a5ece1d03657b",
+          "after_sha256": "0ebbb4653f16a5ed2c64e2968a298b9d4bcea5464e44650434efdcfebbd91068",
+          "replacements": [
+            {
+              "old": "frida_libdir_name = 'frida-' + api_version",
+              "new": "frida_libdir_name = 'xjb-' + api_version",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

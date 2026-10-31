@@ -90,6 +90,21 @@ class PackagingTests(unittest.TestCase):
         compat.write_bytes(header)
         build.validate(self.install, "android-arm64")
 
+    def test_custom_profile_packages_custom_components_with_patch_provenance(self):
+        lib = self.install / "lib"
+        (lib / "frida-1.0").rename(lib / "xjb-1.0")
+        for path in list(self.install.rglob("frida-*")):
+            if path.suffix not in {".h", ".a"}:
+                path.rename(path.with_name(path.name.replace("frida-", "xjb-", 1)))
+        output = self.root / "dist"
+        build.package(self.install, "android-arm64", output, "xjb")
+        manifest = json.loads((output / "xjb-17.25.0-android-arm64.json").read_text())
+        self.assertEqual(manifest["source_profile"]["name"], "xjb")
+        self.assertEqual(len(manifest["source_profile"]["source_profile_sha256"]), 64)
+        self.assertIn("lib/xjb-1.0/64/xjb-gadget.so", manifest["files"])
+        with self.assertRaisesRegex(RuntimeError, "Missing or empty installed component"):
+            build.validate(self.install, "android-arm64", "upstream")
+
     def test_universal_macho_accepts_matching_slice(self):
         path = self.root / "gadget.dylib"
         data = bytearray(2048)
