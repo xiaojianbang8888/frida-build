@@ -88,6 +88,28 @@ class SourceProfileTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "Unsafe profile path"):
                 profiles.safe_path(path)
 
+    def test_staged_profile_upgrades_an_existing_profile_state(self):
+        original = (self.repo / "worker.c").read_bytes()
+        intermediate = original.replace(b"original", b"first")
+        final = intermediate.replace(b"first", b"final")
+        (self.repo / "worker.c").write_bytes(intermediate)
+        change = {
+            "path": "worker.c",
+            "before_sha256": profiles.digest(original),
+            "after_sha256": profiles.digest(final),
+            "steps": [
+                {"before_sha256": profiles.digest(original),
+                 "after_sha256": profiles.digest(intermediate),
+                 "replacements": [{"old": "original", "new": "first", "count": 1}]},
+                {"before_sha256": profiles.digest(intermediate),
+                 "after_sha256": profiles.digest(final),
+                 "replacements": [{"old": "first", "new": "final", "count": 1}]},
+            ],
+        }
+        self.assertEqual(profiles.transformed(intermediate, change), final)
+        self.assertEqual(profiles.transformed(original, change), final)
+        self.assertEqual(profiles.transformed(final, change), final)
+
     def test_binary_audit_counts_chunk_boundaries_and_both_encodings(self):
         path = self.source / "fixture.bin"
         marker = b"gum-js-loop"

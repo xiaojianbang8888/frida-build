@@ -758,18 +758,6 @@
           ]
         },
         {
-          "path": "gum/backend-linux/gumprocess-linux.c",
-          "before_sha256": "5e1bd3b5cf2c3025542028b44cf7ab135ab987079ab93bb982f99e4a5eab5c16",
-          "after_sha256": "8e91c8051fb2aa7687157c4e4c4b058feb79368ac7d6145f80f5062bf1011aff",
-          "replacements": [
-            {
-              "old": "\"gum-modify-thread-worker\"",
-              "new": "\"xjb-thread\"",
-              "count": 1
-            }
-          ]
-        },
-        {
           "path": "gum/gumcmodule.c",
           "before_sha256": "c333525b7e8f41bdb4358f0f4e228ede0b94f5ba67da2776b45361656d761ae0",
           "after_sha256": "7dd25b6f33fb5ab44064c0e6a3ad07878304d2a67b200e64ec7c1d683fe32ce7",
@@ -790,6 +778,35 @@
               "old": "frida_libdir_name = 'frida-' + api_version",
               "new": "frida_libdir_name = 'xjb-' + api_version",
               "count": 1
+            }
+          ]
+        },
+        {
+          "path": "gum/backend-linux/gumprocess-linux.c",
+          "before_sha256": "5e1bd3b5cf2c3025542028b44cf7ab135ab987079ab93bb982f99e4a5eab5c16",
+          "after_sha256": "5125ca811befe7ee7d5e7b34debc010af66c7310e7743732fcd6e56652f3638d",
+          "steps": [
+            {
+              "before_sha256": "5e1bd3b5cf2c3025542028b44cf7ab135ab987079ab93bb982f99e4a5eab5c16",
+              "after_sha256": "8e91c8051fb2aa7687157c4e4c4b058feb79368ac7d6145f80f5062bf1011aff",
+              "replacements": [
+                {
+                  "old": "\"gum-modify-thread-worker\"",
+                  "new": "\"xjb-thread\"",
+                  "count": 1
+                }
+              ]
+            },
+            {
+              "before_sha256": "8e91c8051fb2aa7687157c4e4c4b058feb79368ac7d6145f80f5062bf1011aff",
+              "after_sha256": "5125ca811befe7ee7d5e7b34debc010af66c7310e7743732fcd6e56652f3638d",
+              "replacements": [
+                {
+                  "old": "static const Dl_info *\ngum_try_init_libc_info (void)\n{\n#ifndef HAVE_ANDROID\n  if (!gum_try_resolve_dynamic_symbol (\"__libc_start_main\", &gum_libc_info))\n#endif\n  {\n    if (!gum_try_resolve_dynamic_symbol (\"exit\", &gum_libc_info))\n      return NULL;\n  }\n\n  return &gum_libc_info;\n}",
+                  "new": "#ifdef HAVE_ANDROID\nstatic gchar gum_libc_path[PATH_MAX];\n\nstatic gboolean\ngum_try_resolve_libc_from_proc_maps (Dl_info * info)\n{\n  GumProcMapsIter iter;\n  const gchar * line;\n  GumAddress start, offset;\n  gchar path[PATH_MAX];\n  gboolean found = FALSE;\n\n  gum_proc_maps_iter_init_for_self (&iter);\n\n  while (gum_proc_maps_iter_next (&iter, &line))\n  {\n    gint n;\n\n    path[0] = '\\0';\n    n = sscanf (line,\n        \"%\" G_GINT64_MODIFIER \"x-%*\" G_GINT64_MODIFIER \"x \"\n        \"%*4c %\" G_GINT64_MODIFIER \"x %*s %*d %4095[^\\n]\",\n        &start, &offset, path);\n    if (n != 3 || offset != 0 ||\n        !(g_str_has_suffix (path, \"/libc.so\") ||\n          strcmp (path, \"libc.so\") == 0))\n      continue;\n\n    g_strlcpy (gum_libc_path, path, sizeof (gum_libc_path));\n    info->dli_fname = gum_libc_path;\n    info->dli_fbase = GSIZE_TO_POINTER (start);\n    info->dli_sname = NULL;\n    info->dli_saddr = NULL;\n    found = TRUE;\n    break;\n  }\n\n  gum_proc_maps_iter_destroy (&iter);\n\n  return found;\n}\n#endif\n\nstatic const Dl_info *\ngum_try_init_libc_info (void)\n{\n#ifndef HAVE_ANDROID\n  if (!gum_try_resolve_dynamic_symbol (\"__libc_start_main\", &gum_libc_info))\n  {\n    if (!gum_try_resolve_dynamic_symbol (\"exit\", &gum_libc_info))\n      return NULL;\n  }\n#else\n  if (!gum_try_resolve_dynamic_symbol (\"exit\", &gum_libc_info) &&\n      !gum_try_resolve_libc_from_proc_maps (&gum_libc_info))\n    return NULL;\n#endif\n\n  return &gum_libc_info;\n}",
+                  "count": 1
+                }
+              ]
             }
           ]
         }

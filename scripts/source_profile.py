@@ -49,17 +49,38 @@ def changed_files(repo):
 
 
 def transformed(data, change):
+    if digest(data) == change["after_sha256"]:
+        return data
+
+    if "steps" in change:
+        for step in change["steps"]:
+            if digest(data) == step["after_sha256"]:
+                continue
+            if digest(data) != step["before_sha256"]:
+                raise RuntimeError(f"Unexpected intermediate source: {change['path']}")
+            data = apply_replacements(data, step["replacements"], change["path"])
+            if digest(data) != step["after_sha256"]:
+                raise RuntimeError(f"Unexpected intermediate patch: {change['path']}")
+        if digest(data) != change["after_sha256"]:
+            raise RuntimeError(f"Unexpected patched source: {change['path']}")
+        return data
+
     if digest(data) != change["before_sha256"]:
         raise RuntimeError(f"Unexpected original source: {change['path']}")
-    for replacement in change["replacements"]:
+    data = apply_replacements(data, change["replacements"], change["path"])
+    if digest(data) != change["after_sha256"]:
+        raise RuntimeError(f"Unexpected patched source: {change['path']}")
+    return data
+
+
+def apply_replacements(data, replacements, path):
+    for replacement in replacements:
         old = replacement["old"].encode("utf-8")
         new = replacement["new"].encode("utf-8")
         count = data.count(old)
         if count != replacement["count"]:
-            raise RuntimeError(f"Unexpected replacement count in {change['path']}: {count}")
+            raise RuntimeError(f"Unexpected replacement count in {path}: {count}")
         data = data.replace(old, new)
-    if digest(data) != change["after_sha256"]:
-        raise RuntimeError(f"Unexpected patched source: {change['path']}")
     return data
 
 
